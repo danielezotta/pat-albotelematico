@@ -1,10 +1,16 @@
 package it.danielezotta.albotelematico.ui.screens.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,14 +32,16 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -47,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowForward
@@ -59,7 +68,9 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.surfaceColorAtElevation
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,12 +86,17 @@ import it.danielezotta.albotelematico.data.model.NoticeFilter
 import it.danielezotta.albotelematico.data.model.Territory
 import it.danielezotta.albotelematico.ui.theme.ExpressiveTheme
 import it.danielezotta.albotelematico.ui.theme.ExpressiveTheme.spacing
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNoticeClick: (Notice) -> Unit,
-    onSearchClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -100,6 +116,12 @@ fun HomeScreen(
     val titleColor = MaterialTheme.colorScheme.onSurface
     val subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant
     val spacing = ExpressiveTheme.spacing
+    
+    // Search functionality
+    var searchQuery by remember { mutableStateOf(viewModel.currentSearchQuery()) }
+    var isSearchExpanded by remember { mutableStateOf(searchQuery.isNotEmpty()) }
+    val actionButtonColors = IconButtonDefaults.filledTonalIconButtonColors()
+    val focusManager = LocalFocusManager.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -145,18 +167,34 @@ fun HomeScreen(
                                     )
                                 }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
-                                IconButton(onClick = {
-                                    pendingFilter = viewModel.currentFilter()
-                                    filterSheetVisible = true
-                                }) {
-                                    Icon(Icons.Default.FilterList, contentDescription = "Filtra")
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                                modifier = Modifier.padding(end = 12.dp)
+                            ) {
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        isSearchExpanded = !isSearchExpanded
+                                        if (!isSearchExpanded) {
+                                            focusManager.clearFocus()
+                                        }
+                                    },
+                                    colors = actionButtonColors
+                                ) {
+                                    val icon = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search
+                                    Icon(icon, contentDescription = if (isSearchExpanded) "Chiudi ricerca" else "Apri ricerca")
                                 }
-                                IconButton(onClick = onSearchClick) {
-                                    Icon(Icons.Default.Search, contentDescription = "Cerca")
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        pendingFilter = viewModel.currentFilter()
+                                        filterSheetVisible = true
+                                    },
+                                    colors = actionButtonColors
+                                ) {
+                                    Icon(Icons.Default.FilterList, contentDescription = "Filtra")
                                 }
                             }
                         }
+
                         if (isFilterApplied) {
                             AssistChip(
                                 onClick = {
@@ -168,6 +206,74 @@ fun HomeScreen(
                                     Icon(Icons.Default.FilterList, contentDescription = null)
                                 }
                             )
+                        }
+
+                        // Search input field
+                        AnimatedVisibility(
+                            visible = isSearchExpanded,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                            modifier = Modifier
+                                .padding(vertical = spacing.small).padding(end = spacing.large)
+                        ) {
+                            val searchFieldShape = RoundedCornerShape(24.dp)
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = searchFieldShape,
+                                tonalElevation = 4.dp,
+                                color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+                            ) {
+                                TextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 56.dp),
+                                    singleLine = true,
+                                    textStyle = MaterialTheme.typography.bodyLarge,
+                                    placeholder = {
+                                        Text(
+                                            text = "Cerca negli atti",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                                    trailingIcon = {
+                                        if (searchQuery.isNotEmpty()) {
+                                            IconButton(
+                                                onClick = {
+                                                    searchQuery = ""
+                                                    focusManager.clearFocus()
+                                                    viewModel.updateSearchQuery("")
+                                                    isSearchExpanded = false
+                                                }
+                                            ) {
+                                                Icon(Icons.Default.Close, contentDescription = "Cancella testo")
+                                            }
+                                        }
+                                    },
+                                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+                                    keyboardActions = KeyboardActions(onSearch = {
+                                        focusManager.clearFocus()
+                                        val trimmed = searchQuery.trim()
+                                        viewModel.updateSearchQuery(trimmed)
+                                    }),
+                                    shape = searchFieldShape,
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        disabledContainerColor = Color.Transparent,
+                                        errorContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                        disabledIndicatorColor = Color.Transparent,
+                                        errorIndicatorColor = Color.Transparent,
+                                        cursorColor = MaterialTheme.colorScheme.primary,
+                                        focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+                                        focusedTrailingIconColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
                         }
                     }
                 },
@@ -462,15 +568,15 @@ private fun FilterSheet(
                             territoryExpanded = if (territoryOptions.isNotEmpty()) expanded else false
                         }
                     ) {
+                        val fillMaxWidth = Modifier
+                            .fillMaxWidth()
                         OutlinedTextField(
                             value = selectedTerritoryLabel,
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Territorio") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = territoryExpanded) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
+                            modifier = fillMaxWidth.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, true)
                         )
                         ExposedDropdownMenu(
                             expanded = territoryExpanded,

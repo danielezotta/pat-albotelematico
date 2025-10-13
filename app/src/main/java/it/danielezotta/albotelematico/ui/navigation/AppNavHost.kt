@@ -10,7 +10,6 @@ import androidx.navigation.NavType
 import it.danielezotta.albotelematico.ui.screens.competitions.CompetitionsScreen
 import it.danielezotta.albotelematico.ui.screens.home.HomeScreen
 import it.danielezotta.albotelematico.ui.screens.noticedetail.NoticeDetailScreen
-import it.danielezotta.albotelematico.ui.screens.search.SearchScreen
 import it.danielezotta.albotelematico.ui.screens.tenders.ExpiredTendersScreen
 import it.danielezotta.albotelematico.ui.screens.tenders.TendersScreen
 import com.google.gson.Gson
@@ -29,9 +28,6 @@ fun AppNavHost(
                 onNoticeClick = { notice ->
                     val payload = Uri.encode(Gson().toJson(notice))
                     navController.navigate(Screen.NoticeDetail.createRoute(payload))
-                },
-                onSearchClick = {
-                    navController.navigate(Screen.Search.route)
                 }
             )
         }
@@ -75,16 +71,6 @@ fun AppNavHost(
             val notice = runCatching { Gson().fromJson(decoded, Notice::class.java) }.getOrNull() ?: return@composable
             NoticeDetailScreen(
                 notice = notice,
-                onBackClick = { navController.popBackStack() }
-            )
-        }
-        
-        composable(Screen.Search.route) {
-            SearchScreen(
-                onNoticeClick = { notice ->
-                    val payload = Uri.encode(Gson().toJson(notice))
-                    navController.navigate(Screen.NoticeDetail.createRoute(payload))
-                },
                 onBackClick = { navController.popBackStack() }
             )
         }

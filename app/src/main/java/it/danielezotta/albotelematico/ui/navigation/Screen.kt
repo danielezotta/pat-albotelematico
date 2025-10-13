@@ -11,5 +11,4 @@ sealed class Screen(val route: String) {
     object NoticeDetail : Screen("notice_detail?noticeJson={noticeJson}") {
         fun createRoute(noticeJson: String) = "notice_detail?noticeJson=$noticeJson"
     }
-    object Search : Screen("search")
 }

@@ -54,6 +54,8 @@ class HomeViewModel @Inject constructor(
     private var totalCount = 0
     private val loadedNotices = mutableListOf<Notice>()
     private var currentFilter: NoticeFilter = NoticeFilter()
+    var searchQuery: String by mutableStateOf("")
+        private set
     private val municipalityCache = mutableMapOf<String, List<Municipality>>()
     private var lastRequestedTerritory: String? = null
 
@@ -128,7 +130,9 @@ class HomeViewModel @Inject constructor(
             }
 
             try {
-                val result = repository.getNotices(currentPage, pageSize, currentFilter)
+                // Create a filter that includes both the current filter and search query
+                val filterWithSearch = currentFilter.copy(search = searchQuery)
+                val result = repository.getNotices(currentPage, pageSize, filterWithSearch)
                 result.onSuccess { page ->
                     if (reset) {
                         loadedNotices.clear()
@@ -172,9 +176,19 @@ class HomeViewModel @Inject constructor(
         loadNotices(reset = true)
     }
 
+    fun updateSearchQuery(query: String) {
+        searchQuery = query
+        currentPage = 1
+        totalCount = 0
+        loadedNotices.clear()
+        loadNotices(reset = true)
+    }
+
     fun loadMore() {
         loadNotices(reset = false)
     }
 
     fun currentFilter(): NoticeFilter = currentFilter
+    
+    fun currentSearchQuery(): String = searchQuery
 }
