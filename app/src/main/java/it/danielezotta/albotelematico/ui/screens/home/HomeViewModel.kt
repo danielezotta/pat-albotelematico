@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import it.danielezotta.albotelematico.data.local.FilterPreferencesDataSource
 import it.danielezotta.albotelematico.data.model.Municipality
 import it.danielezotta.albotelematico.data.model.Notice
 import it.danielezotta.albotelematico.data.model.NoticeFilter
@@ -24,7 +25,8 @@ sealed class HomeUiState {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: NoticeRepository,
-    private val territoryRepository: TerritoryRepository
+    private val territoryRepository: TerritoryRepository,
+    private val filterPreferences: FilterPreferencesDataSource
 ) : ViewModel() {
 
     var uiState: HomeUiState by mutableStateOf(HomeUiState.Loading)
@@ -53,15 +55,34 @@ class HomeViewModel @Inject constructor(
     private var isFetching = false
     private var totalCount = 0
     private val loadedNotices = mutableListOf<Notice>()
-    private var currentFilter: NoticeFilter = NoticeFilter()
+    private var currentFilterState: NoticeFilter by mutableStateOf(NoticeFilter())
     var searchQuery: String by mutableStateOf("")
         private set
     private val municipalityCache = mutableMapOf<String, List<Municipality>>()
     private var lastRequestedTerritory: String? = null
 
     init {
-        ensureTerritoriesLoaded(force = true)
-        loadNotices(reset = true)
+        viewModelScope.launch {
+            ensureTerritoriesLoaded(force = true)
+
+            val savedFilter = filterPreferences.readFilter()
+            val savedSearchQuery = filterPreferences.readSearchQuery()
+
+            currentFilterState = savedFilter
+            searchQuery = savedSearchQuery
+
+            currentPage = 1
+            totalCount = 0
+            loadedNotices.clear()
+
+            if (savedFilter.territory.isNotBlank()) {
+                loadMunicipalities(savedFilter.territory)
+            } else {
+                municipalities = emptyList()
+            }
+
+            loadNotices(reset = true)
+        }
     }
 
     fun ensureTerritoriesLoaded(force: Boolean = false) {
@@ -131,7 +152,7 @@ class HomeViewModel @Inject constructor(
 
             try {
                 // Create a filter that includes both the current filter and search query
-                val filterWithSearch = currentFilter.copy(search = searchQuery)
+                val filterWithSearch = currentFilterState.copy(search = searchQuery)
                 val result = repository.getNotices(currentPage, pageSize, filterWithSearch)
                 result.onSuccess { page ->
                     if (reset) {
@@ -164,7 +185,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun applyFilter(filter: NoticeFilter) {
-        currentFilter = filter
+        currentFilterState = filter
         currentPage = 1
         totalCount = 0
         loadedNotices.clear()
@@ -172,6 +193,9 @@ class HomeViewModel @Inject constructor(
             loadMunicipalities(filter.territory)
         } else {
             municipalities = emptyList()
+        }
+        viewModelScope.launch {
+            filterPreferences.saveFilter(filter)
         }
         loadNotices(reset = true)
     }
@@ -181,6 +205,9 @@ class HomeViewModel @Inject constructor(
         currentPage = 1
         totalCount = 0
         loadedNotices.clear()
+        viewModelScope.launch {
+            filterPreferences.saveSearchQuery(query)
+        }
         loadNotices(reset = true)
     }
 
@@ -188,7 +215,7 @@ class HomeViewModel @Inject constructor(
         loadNotices(reset = false)
     }
 
-    fun currentFilter(): NoticeFilter = currentFilter
+    fun currentFilter(): NoticeFilter = currentFilterState
     
     fun currentSearchQuery(): String = searchQuery
 }

@@ -38,7 +38,7 @@ class TerritoryRepository @Inject constructor(
             if (!response.isSuccessful) {
                 throw IOException("Richiesta fallita con codice ${response.code}")
             }
-            response.body?.string() ?: throw IOException("Risposta vuota da $url")
+            response.body.string()
         }
     }
 
@@ -88,7 +88,7 @@ class TerritoryRepository @Inject constructor(
 
     companion object {
         private const val BASE_URL = "https://www.albotelematico.tn.it"
-        private val COUNT_REGEX = Regex("^([^\\(]+)\\((\\d+)\\)")
+        private val COUNT_REGEX = Regex("^([^(]+)\\((\\d+)\\)")
 
         private fun resolveUrl(href: String): String {
             if (href.startsWith("http")) return href

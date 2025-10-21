@@ -1,6 +1,5 @@
 package it.danielezotta.albotelematico.data.mapper
 
-import android.net.Uri
 import it.danielezotta.albotelematico.data.model.Attachment
 import it.danielezotta.albotelematico.data.model.AttachmentType
 import it.danielezotta.albotelematico.data.model.Notice
@@ -8,6 +7,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.util.Locale
 import javax.inject.Inject
+import androidx.core.net.toUri
 
 class NoticeMapper @Inject constructor() {
 
@@ -78,7 +78,7 @@ class NoticeMapper @Inject constructor() {
 
     private fun extractId(url: String?): String? {
         if (url.isNullOrBlank()) return null
-        val parsed = runCatching { Uri.parse(url) }.getOrNull()
+        val parsed = runCatching { url.toUri() }.getOrNull()
         val idFromQuery = parsed?.getQueryParameter("id") ?: parsed?.getQueryParameter("ID")
         if (!idFromQuery.isNullOrBlank()) return idFromQuery
         val lastSegment = parsed?.lastPathSegment?.takeIf { it.isNotBlank() }
@@ -108,6 +108,6 @@ class NoticeMapper @Inject constructor() {
         private val DATE_REGEX = Regex("\\d{2}/\\d{2}/\\d{4}")
         private val EXPIRY_REGEX = Regex("fino al (\\d{2}/\\d{2}/\\d{4})", RegexOption.IGNORE_CASE)
         private val MUNICIPALITY_REGEX = Regex("Comune di ([A-Za-zÀ-ÿ'\\s-]+)", RegexOption.IGNORE_CASE)
-        private val PUBLISHER_REGEX = Regex("Atto pubblicato da\\s+([^\\.;]+)", RegexOption.IGNORE_CASE)
+        private val PUBLISHER_REGEX = Regex("Atto pubblicato da\\s+([^.;]+)", RegexOption.IGNORE_CASE)
     }
 }

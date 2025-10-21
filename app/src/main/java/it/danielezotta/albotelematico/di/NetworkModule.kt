@@ -28,9 +28,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideGson(): Gson = GsonBuilder()
-        .setLenient()
-        .create()
+    fun provideGson(): Gson = GsonBuilder().create()
 
     @Provides
     @Singleton

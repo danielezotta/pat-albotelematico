@@ -34,30 +34,18 @@ fun AppNavHost(
         
         composable(Screen.Tenders.route) {
             TendersScreen(
-                onNoticeClick = { notice ->
-                    val payload = Uri.encode(Gson().toJson(notice))
-                    navController.navigate(Screen.NoticeDetail.createRoute(payload))
-                },
                 onBackClick = { navController.popBackStack() }
             )
         }
         
         composable(Screen.Competitions.route) {
             CompetitionsScreen(
-                onNoticeClick = { notice ->
-                    val payload = Uri.encode(Gson().toJson(notice))
-                    navController.navigate(Screen.NoticeDetail.createRoute(payload))
-                },
                 onBackClick = { navController.popBackStack() }
             )
         }
         
         composable(Screen.ExpiredTenders.route) {
             ExpiredTendersScreen(
-                onNoticeClick = { notice ->
-                    val payload = Uri.encode(Gson().toJson(notice))
-                    navController.navigate(Screen.NoticeDetail.createRoute(payload))
-                },
                 onBackClick = { navController.popBackStack() }
             )
         }

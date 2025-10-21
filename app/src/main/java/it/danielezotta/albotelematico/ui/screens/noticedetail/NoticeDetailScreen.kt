@@ -1,7 +1,6 @@
 package it.danielezotta.albotelematico.ui.screens.noticedetail
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -14,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Domain
@@ -37,6 +36,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import it.danielezotta.albotelematico.data.model.Notice
 import it.danielezotta.albotelematico.ui.theme.ExpressiveTheme
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +53,7 @@ fun NoticeDetailScreen(
                 title = { Text("Dettaglio atto") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
                     }
                 },
                 actions = {
@@ -140,7 +140,7 @@ fun NoticeDetailScreen(
                     notice.attachments.forEach { attachment ->
                         AssistChip(
                             onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(attachment.url))
+                                val intent = Intent(Intent.ACTION_VIEW, attachment.url.toUri())
                                 context.startActivity(intent)
                             },
                             label = { Text(attachment.name) },
@@ -159,7 +159,7 @@ fun NoticeDetailScreen(
 
             Button(
                 onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(notice.url))
+                    val intent = Intent(Intent.ACTION_VIEW, notice.url.toUri())
                     context.startActivity(intent)
                 }
             ) {

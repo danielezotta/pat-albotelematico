@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,8 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetDefaults
@@ -44,6 +46,8 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -58,7 +62,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
@@ -76,15 +79,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import it.danielezotta.albotelematico.data.model.Municipality
 import it.danielezotta.albotelematico.data.model.Notice
 import it.danielezotta.albotelematico.data.model.NoticeDataSource
 import it.danielezotta.albotelematico.data.model.NoticeFilter
 import it.danielezotta.albotelematico.data.model.Territory
-import it.danielezotta.albotelematico.ui.theme.ExpressiveTheme
 import it.danielezotta.albotelematico.ui.theme.ExpressiveTheme.spacing
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -101,7 +101,8 @@ fun HomeScreen(
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val uiState = viewModel.uiState
-    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = uiState is HomeUiState.Loading)
+    val refreshState = rememberPullToRefreshState()
+
     var filterSheetVisible by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var pendingFilter by remember { mutableStateOf(viewModel.currentFilter()) }
@@ -115,7 +116,7 @@ fun HomeScreen(
     val municipalityError = viewModel.municipalityError
     val titleColor = MaterialTheme.colorScheme.onSurface
     val subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val spacing = ExpressiveTheme.spacing
+    val spacing = spacing
     
     // Search functionality
     var searchQuery by remember { mutableStateOf(viewModel.currentSearchQuery()) }
@@ -190,22 +191,22 @@ fun HomeScreen(
                                     },
                                     colors = actionButtonColors
                                 ) {
-                                    Icon(Icons.Default.FilterList, contentDescription = "Filtra")
+                                    Box(
+                                        modifier = Modifier.size(24.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.FilterList, contentDescription = "Filtra")
+                                        if (isFilterApplied) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .size(8.dp)
+                                                    .background(MaterialTheme.colorScheme.error, CircleShape)
+                                            )
+                                        }
+                                    }
                                 }
                             }
-                        }
-
-                        if (isFilterApplied) {
-                            AssistChip(
-                                onClick = {
-                                    pendingFilter = appliedFilter
-                                    filterSheetVisible = true
-                                },
-                                label = { Text("Filtri attivi") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.FilterList, contentDescription = null)
-                                }
-                            )
                         }
 
                         // Search input field
@@ -287,37 +288,32 @@ fun HomeScreen(
             )
         },
         content = { paddingValues ->
-            SwipeRefresh(
-                state = swipeRefreshState,
-                onRefresh = viewModel::refresh,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
+            PullToRefreshBox(
+                state = refreshState,
+                isRefreshing = uiState is HomeUiState.Loading,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.padding(paddingValues).fillMaxSize()
             ) {
-                when (uiState) {
-                    is HomeUiState.Loading -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(spacing.huge),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    when (uiState) {
+                        is HomeUiState.Loading -> {
                         }
-                    }
-                    is HomeUiState.Error -> {
-                        HomeErrorState(
-                            message = uiState.message,
-                            onRetry = viewModel::refresh
-                        )
-                    }
-                    is HomeUiState.Success -> {
-                        HomeContent(
-                            notices = uiState.notices,
-                            hasMore = uiState.hasMore,
-                            onNoticeClick = onNoticeClick,
-                            onLoadMore = viewModel::loadMore
-                        )
+                        is HomeUiState.Error -> {
+                            HomeErrorState(
+                                message = uiState.message,
+                                onRetry = viewModel::refresh
+                            )
+                        }
+                        is HomeUiState.Success -> {
+                            HomeContent(
+                                notices = uiState.notices,
+                                hasMore = uiState.hasMore,
+                                onNoticeClick = onNoticeClick,
+                                onLoadMore = viewModel::loadMore
+                            )
+                        }
                     }
                 }
             }
@@ -360,7 +356,7 @@ private fun DatasetChoiceRow(
     selected: NoticeDataSource,
     onSelected: (NoticeDataSource) -> Unit
 ) {
-    val spacing = ExpressiveTheme.spacing
+    val spacing = spacing
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(spacing.small),
         verticalArrangement = Arrangement.spacedBy(spacing.small)
@@ -387,7 +383,7 @@ private fun FilterChoiceRow(
     onSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val spacing = ExpressiveTheme.spacing
+    val spacing = spacing
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(spacing.small),
@@ -645,7 +641,10 @@ private fun FilterSheet(
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = municipalityExpanded) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .menuAnchor()
+                                    .menuAnchor(
+                                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        enabled = true
+                                    )
                             )
                             ExposedDropdownMenu(
                                 expanded = municipalityExpanded,
@@ -778,11 +777,13 @@ private fun HomeContent(
     onNoticeClick: (Notice) -> Unit,
     onLoadMore: () -> Unit
 ) {
-    val spacing = ExpressiveTheme.spacing
-    LazyColumn(
+    val spacing = spacing
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 350.dp),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = spacing.extraLarge, vertical = spacing.extraLarge),
-        verticalArrangement = Arrangement.spacedBy(spacing.extraLarge)
+        verticalArrangement = Arrangement.spacedBy(spacing.extraLarge),
+        horizontalArrangement = Arrangement.spacedBy(spacing.extraLarge)
     ) {
         if (notices.isNotEmpty()) {
             items(notices, key = { it.id }) { notice ->
@@ -839,7 +840,7 @@ private fun NoticeCard(
     notice: Notice,
     onClick: () -> Unit
 ) {
-    val spacing = ExpressiveTheme.spacing
+    val spacing = spacing
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.large,
@@ -956,7 +957,7 @@ private fun HomeErrorState(
     message: String,
     onRetry: () -> Unit
 ) {
-    val spacing = ExpressiveTheme.spacing
+    val spacing = spacing
     Column(
         modifier = Modifier
             .fillMaxSize()
